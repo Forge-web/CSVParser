@@ -2,14 +2,19 @@ import argparse
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-f', '--file',
+parser.add_argument('--file',
                     type=str,
-                    help='Путь до файла с расштрением')
+                    help='Путь до файла с расширением')
 
 
-parser.add_argument('-w', '--where',
+parser.add_argument('--where',
                     type=str,
-                    help='условия фильтрации')
+                    help='Условия фильтрации')
+
+
+parser.add_argument('--aggregate',
+                    type=str,
+                    help='Условия сортировки')
 
 
 args_read = parser.parse_args()
