@@ -1,103 +1,81 @@
-from .parser_args import args_read
-
+from .parser_args import parser_args
+from .filter_csv import FilterCSV
 
 from tabulate import tabulate
 
 import csv
-import operator
+
 
 
 class ParseCSV():
-    def __init__(self, file_csv, delimiter=',', encoding='utf-8'):
-        self.file_csv = file_csv
+    def __init__(self, args, delimiter=',', encoding='utf-8'):
+        self._args = args
         self.delimiter = delimiter
         self.encoding = encoding
- 
-        self.operators = {
-            "=": operator.eq,
-            ">": operator.gt,
-            "<": operator.lt
-        }
+        self.filter_csv = FilterCSV()
 
-        self.list_aggregate = {
-            "avg": self.avg,
-            "min": min,
-            "max": max
-        }
-
-
-    def avg(self, list_num: list[int|float]):
-        avg_result = 0
-        for i in list_num:
-            avg_result += i
-        
-        return avg_result / len(list_num)
-
-
-    def aggregate_csv(self, expression: str, data: list[dict]):
-        for aggregate_str in self.list_aggregate:
-            if aggregate_str in expression and "=" in expression:
-                list_num = []
-                column, value = expression.split('=')
-
-                for i in data:
-                    try:
-                        list_num.append(float(i[column]))
-                    except:
-                        raise TypeError("--aggregate column must be int or float")
-
-                aggregate_func = self.list_aggregate[aggregate_str]
-                return {str(column):[str(aggregate_func(list_num))]}
-
-            
-        raise ValueError("--aggregate must be 'column=min|max|avg'")
-
-
-    def filter_csv(self, expression: str, data:dict) -> dict | None:
-        for operator_str in self.operators:
-            if operator_str in expression:
-
-                column, value = expression.split(operator_str)
-                column = column.strip()
-                value = value.strip()
                 
-                try:
-                    value1 = float(data[column])
-                    value2 = float(value)
-                except:  # noqa: E722
-                    ...
-                
-                operator_func = self.operators[operator_str]
-
-                if operator_func(value1, value2):
-                    return data
-            
-            
-        raise ValueError("--where must be  'column > | < | = str | int | float'")
-                
-                
-    def read(self):
-        with open(self.file_csv, encoding=self.encoding) as r_file:
+    def _get_content_file(self):
+        with open(self._args.file, encoding=self.encoding) as r_file:
             reader = csv.DictReader(r_file, delimiter=self.delimiter)
-            content = []
+            return [i for i in reader]
 
-            if exp := args_read.where:
-                for i in reader:
-                    
-                    if res := self.filter_csv(str(exp), i):
-                        content.append(res)
-            
-            if exp := args_read.aggregate:
-                if content != []:
-                    content = self.aggregate_csv(exp, content)
-                
-                else:
-                    content = self.aggregate_csv(exp, [i for i in reader])
-            
-            print(content)
 
-            return tabulate(content, tablefmt='grid', headers='keys')
+    def _to_aggregate(
+            self, 
+            content_file: list[dict]) -> dict[str:str] | None:
+
     
+        if self._args.aggregate is None:
+            return None
+
+        result_aggregate = self.filter_csv.aggregate_by_column_Tnum(
+            str(self._args.aggregate), 
+            content_file
+        )
+            
+        return result_aggregate
+    
+    def _to_filter(
+            self,
+            content_file: list[dict])->list[dict] | None:
+        
+        if self._args.where is None:
+            return None
+        
+        result_filter = self.filter_csv.filter_by_column(
+                str(self._args.where),
+                content_file
+            )
+
+        return result_filter
+    
+        
+
+    def _send_result(self, content_file: list[dict]):
+        return tabulate(content_file, tablefmt='grid', headers='keys')
+
+
+    def read_tabulate(self):
+        content_file = self._get_content_file()
+        
+
+        _where = self._args.where
+        _aggregate = self._args.aggregate
+        
+        if _where and _aggregate:
+            content_file = self._to_aggregate(self._to_filter(content_file))
+            return self._send_result(content_file)
+
+        if _where:
+            content_file = self._to_filter(content_file)
+
+        if _aggregate:
+            content_file = self._to_aggregate(content_file)
+        
+        
+        return self._send_result(content_file)
+        
 
 
     

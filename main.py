@@ -1,11 +1,7 @@
-from src.parser_args import args_read
 from src.parser_csv import ParseCSV
+from src.parser_args import create_parser_args
 
-from tabulate import tabulate
-import argparse
-
-
-parser_csv = ParseCSV(file_csv=args_read.file)
+parser_csv = ParseCSV(args=create_parser_args().parse_args())
 
 if __name__ == "__main__":
-    print(parser_csv.read())
+    print(parser_csv.read_tabulate())
